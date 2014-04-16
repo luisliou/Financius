@@ -1,11 +1,15 @@
 package com.code44.finance.ui;
 
+import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import com.code44.finance.R;
+import com.code44.finance.ui.accounts.AccountListActivity;
+import com.code44.finance.ui.accounts.AccountListFragment;
 import com.code44.finance.ui.dialogs.DateTimeDialog;
 import com.code44.finance.utils.FilterHelper;
 import com.code44.finance.utils.PeriodHelper;
@@ -13,10 +17,11 @@ import com.code44.finance.views.FilterToggleView;
 import de.greenrobot.event.EventBus;
 import org.joda.time.format.DateTimeFormat;
 
-public class FilterFragment extends AbstractFragment implements View.OnClickListener, DateTimeDialog.DialogCallbacks, FilterToggleView.Callbacks
+public class FilterFragment extends BaseFragment implements View.OnClickListener, DateTimeDialog.DialogCallbacks, FilterToggleView.Callbacks
 {
     private static final int REQUEST_DATE_FROM = 1;
     private static final int REQUEST_DATE_TO = 2;
+    private static final int REQUEST_ACCOUNT = 3;
     // -----------------------------------------------------------------------------------------------------------------
     private static final String FRAGMENT_DATE_TIME = "FRAGMENT_DATE_TIME";
     // -----------------------------------------------------------------------------------------------------------------
@@ -29,6 +34,20 @@ public class FilterFragment extends AbstractFragment implements View.OnClickList
     // -----------------------------------------------------------------------------------------------------------------
     private FilterHelper filterHelper;
     private boolean isExpanded = false;
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+
+            case REQUEST_ACCOUNT: {
+                if (resultCode == Activity.RESULT_OK) {
+                    filterHelper.setAccountID(data.getLongExtra(AccountListFragment.RESULT_EXTRA_ITEM_ID, 0));
+		}
+                break;
+            }
+        }
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
@@ -101,8 +120,6 @@ public class FilterFragment extends AbstractFragment implements View.OnClickList
         switch (v.getId())
         {
             case R.id.periodFilter_V:
-            case R.id.accountsFilter_V:
-            case R.id.categoriesFilter_V:
             {
                 if (isExpanded)
                     collapseFilter();
@@ -110,6 +127,17 @@ public class FilterFragment extends AbstractFragment implements View.OnClickList
                     expandFilter(v);
                 break;
             }
+
+            case R.id.accountsFilter_V:
+            {
+                AccountListActivity.startListSelection(getActivity(), this, REQUEST_ACCOUNT);
+                break;
+            }
+            case R.id.categoriesFilter_V:
+            {
+                break;
+            }
+
 
             case R.id.dateFrom_B:
                 DateTimeDialog.newDateDialogInstance(this, REQUEST_DATE_FROM, filterHelper.getPeriodStart() > 0 ? filterHelper.getPeriodStart() : System.currentTimeMillis()).show(getFragmentManager(), FRAGMENT_DATE_TIME);
@@ -144,6 +172,9 @@ public class FilterFragment extends AbstractFragment implements View.OnClickList
             case R.id.periodFilter_V:
                 filterHelper.clearPeriod();
                 break;
+            case R.id.accountsFilter_V:
+                filterHelper.clearAccount();
+                break;
         }
     }
 
@@ -164,14 +195,7 @@ public class FilterFragment extends AbstractFragment implements View.OnClickList
             periodContainer_V.setVisibility(View.GONE);
         }
 
-        if (accountsFilter_V.equals(v))
-        {
-            accountsFilter_V.setVisibility(View.VISIBLE);
-        }
-        else
-        {
-            accountsFilter_V.setVisibility(View.GONE);
-        }
+        accountsFilter_V.setVisibility(View.VISIBLE);
 
         if (categoriesFilter_V.equals(v))
         {
@@ -219,13 +243,17 @@ public class FilterFragment extends AbstractFragment implements View.OnClickList
             dateTo_B.setText(notSetStr);
         }
 
-        accountsFilter_V.setDescription(notSetStr);
+        if(filterHelper.isAccountSet()) {
+            accountsFilter_V.setDescription(filterHelper.getAccountName());
+        }
+        else {
+            accountsFilter_V.setDescription(notSetStr);
+        }
         categoriesFilter_V.setDescription(notSetStr);
 
         if (!isExpanded)
         {
             periodFilter_V.setVisibility(View.VISIBLE);
-            accountsFilter_V.setVisibility(View.GONE);
             categoriesFilter_V.setVisibility(View.GONE);
 
             periodContainer_V.setVisibility(View.GONE);
